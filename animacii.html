@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анимации на canvas с JS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            color: white;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.3rem;
+            font-weight: 400;
+            letter-spacing: 0.3px;
+        }
+
+        .buttons-container {
+            display: flex;
+            justify-content: center;
+            /* flex-direction: column; */
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+            align-items: center;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow:
+                0 8px 32px 0 rgba(31, 38, 135, 0.15),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+            padding: 18px 40px;
+            color: white;
+            text-decoration: none;
+            font-size: 1.2rem;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 250px;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-3px);
+            box-shadow:
+                0 12px 40px 0 rgba(31, 38, 135, 0.25),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1.1rem;
+            }
+
+            .btn {
+                width: 100%;
+                min-width: auto;
+                padding: 16px 30px;
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Анимации</h1>
+            <div class="subtitle">на canvas с JS</div>
+        </div>
+
+        <div class="buttons-container">
+            <a href="./animacii/zvezdi.html" class="btn">Звезды</a>
+            <a href="./animacii/geometrija.html" class="btn">Геометрия</a>
+            <a href="./animacii/shariki.html" class="btn">Шарики</a>
+            <a href="./animacii/shariki2.html" class="btn">Шарики-2</a>
+            <a href="./animacii/centr.html" class="btn">Центровая</a>
+            <a href="./animacii/lazer.html" class="btn">Лазер</a>
+            <a href="./animacii/zhidk_metall.html" class="btn">Жидкий металл</a>
+            <a href="./animacii/dozhd.html" class="btn">Дождь</a>
+            <a href="./animacii/dozhd2.html" class="btn">Дождь-2</a>
+            <a href="./animacii/fejerverk.html" class="btn">Фейерверк</a>
+            <a href="./animacii/sever_sijanije.html" class="btn">_?Северное сияние (ошибка)</a>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="index.html" class="back-link">← На главную</a>
+        </div>
+        <p style="text-align: center;" class="buttons-container">См. также <a
+                href="https://codepen.io/tag/canvas-animation?cursor=ZD0xJm89MCZwPTQ=">codepen</a> и <a
+                href="https://github.com/crnacura/AmbientCanvasBackgrounds">AmbientCanvasBackgrounds</a>
+    </div>
+</body>
+
+</html>

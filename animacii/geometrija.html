@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="ru">
+<!-- ИСТОЧНИК https://codepen.io/Mahim-Khan-the-styleful/pen/YPWLwxz -->
+
+<head>
+    <meta charset="UTF-8">
+    <title>Медленное Северное Сияние</title>
+    <style>
+        /* style.css */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body,
+        html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        .background-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #0a0a1a 0%, #050510 70%, #020207 100%);
+            z-index: 1;
+        }
+
+        /* Canvas layers */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+
+        #energy-layer {
+            z-index: 3;
+        }
+
+        #distortion-layer {
+            z-index: 4;
+            opacity: 0.3;
+        }
+
+        #glow-layer {
+            z-index: 5;
+            opacity: 0.7;
+        }
+
+        #particle-layer {
+            z-index: 6;
+            opacity: 0.5;
+        }
+
+        /* Subtle info overlay */
+        .info-overlay {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(180, 200, 255, 0.2);
+            font-size: 12px;
+            font-weight: 300;
+            letter-spacing: 1.5px;
+            text-align: right;
+            z-index: 10;
+            pointer-events: none;
+            transition: color 5s ease;
+        }
+
+        .info-text {
+            margin-bottom: 8px;
+        }
+
+        .time-display {
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Main container for the animated background -->
+    <div class="background-container">
+        <!-- Multiple canvas layers for depth effect -->
+        <canvas id="energy-layer"></canvas>
+        <canvas id="distortion-layer"></canvas>
+        <canvas id="glow-layer"></canvas>
+        <canvas id="particle-layer"></canvas>
+
+        <!-- Info overlay for CodePen -->
+        <div class="info-overlay">
+            <div class="info-text"></div>
+            <!-- <div class="time-display"></div> -->
+        </div>
+    </div>
+
+    <script>
+        // script.js
+        // Main application
+        class DigitalAtmosphere {
+            constructor() {
+                // Get canvas elements
+                this.canvasEnergy = document.getElementById('energy-layer');
+                this.canvasDistortion = document.getElementById('distortion-layer');
+                this.canvasGlow = document.getElementById('glow-layer');
+                this.canvasParticle = document.getElementById('particle-layer');
+
+                // Get contexts
+                this.ctxEnergy = this.canvasEnergy.getContext('2d');
+                this.ctxDistortion = this.canvasDistortion.getContext('2d');
+                this.ctxGlow = this.canvasGlow.getContext('2d');
+                this.ctxParticle = this.canvasParticle.getContext('2d');
+
+                // Set canvas dimensions
+                this.resizeCanvas();
+
+                // Configuration
+                this.config = {
+                    // Colors (deep cinematic palette)
+                    colors: {
+                        primary: [100, 150, 255],  // Soft blue
+                        secondary: [180, 100, 255], // Soft purple
+                        accent: [50, 200, 230],     // Cyan accent
+                        darkBg: [5, 5, 15]          // Deep background
+                    },
+
+                    // Energy field settings
+                    energy: {
+                        count: 12,
+                        speed: 0.0001,
+                        amplitude: 0.3,
+                        frequency: 0.002,
+                        thickness: 1.5
+                    },
+
+                    // Distortion field settings
+                    distortion: {
+                        count: 8,
+                        speed: 0.00005,
+                        amplitude: 0.4,
+                        frequency: 0.001,
+                        blur: 15
+                    },
+
+                    // Glow points settings
+                    glow: {
+                        count: 30,
+                        speed: 0.00002,
+                        size: { min: 2, max: 8 },
+                        pulseSpeed: 0.0005
+                    },
+
+                    // Organic particles settings
+                    particles: {
+                        count: 80,
+                        speed: 0.00003,
+                        connectionDistance: 150,
+                        size: 1.2,
+                        flowStrength: 0.2
+                    }
+                };
+
+                // Initialize components
+                this.initEnergyFields();
+                this.initDistortionFields();
+                this.initGlowPoints();
+                this.initParticles();
+
+                // Time tracking for evolution
+                this.time = 0;
+                this.lastTime = 0;
+                this.realTime = new Date();
+
+                // Start animation
+                this.animate();
+
+                // Handle window resize
+                window.addEventListener('resize', () => this.resizeCanvas());
+
+                // Update time display
+                this.updateTimeDisplay();
+                setInterval(() => this.updateTimeDisplay(), 60000); // Update every minute
+            }
+
+            // Resize all canvases
+            resizeCanvas() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+
+                [this.canvasEnergy, this.canvasDistortion, this.canvasGlow, this.canvasParticle].forEach(canvas => {
+                    canvas.width = width;
+                    canvas.height = height;
+                });
+
+                // Reinitialize components that depend on canvas size
+                if (this.glowPoints) this.initGlowPoints();
+                if (this.particles) this.initParticles();
+            }
+
+            // Initialize energy fields (invisible forces that reveal themselves)
+            initEnergyFields() {
+                this.energyFields = [];
+                const centerX = this.canvasEnergy.width / 2;
+                const centerY = this.canvasEnergy.height / 2;
+                const maxRadius = Math.max(centerX, centerY) * 1.5;
+
+                for (let i = 0; i < this.config.energy.count; i++) {
+                    const angle = (i / this.config.energy.count) * Math.PI * 2;
+                    const distance = 0.3 + Math.random() * 0.4;
+
+                    this.energyFields.push({
+                        angle: angle,
+                        distance: distance,
+                        phase: Math.random() * Math.PI * 2,
+                        radius: 100 + Math.random() * maxRadius * 0.7,
+                        thickness: 0.5 + Math.random() * this.config.energy.thickness,
+                        speed: 0.5 + Math.random() * this.config.energy.speed * 2
+                    });
+                }
+            }
+
+            // Initialize distortion fields (liquid air effect)
+            initDistortionFields() {
+                this.distortionFields = [];
+
+                for (let i = 0; i < this.config.distortion.count; i++) {
+                    this.distortionFields.push({
+                        x: Math.random(),
+                        y: Math.random(),
+                        phaseX: Math.random() * Math.PI * 2,
+                        phaseY: Math.random() * Math.PI * 2,
+                        amplitude: 0.2 + Math.random() * this.config.distortion.amplitude,
+                        frequency: 0.5 + Math.random() * this.config.distortion.frequency * 2,
+                        speed: 0.3 + Math.random() * this.config.distortion.speed * 2
+                    });
+                }
+            }
+
+            // Initialize glow points (soft highlights)
+            initGlowPoints() {
+                this.glowPoints = [];
+
+                for (let i = 0; i < this.config.glow.count; i++) {
+                    this.glowPoints.push({
+                        x: Math.random() * this.canvasGlow.width,
+                        y: Math.random() * this.canvasGlow.height,
+                        baseSize: this.config.glow.size.min + Math.random() * (this.config.glow.size.max - this.config.glow.size.min),
+                        phase: Math.random() * Math.PI * 2,
+                        speed: 0.5 + Math.random() * this.config.glow.speed * 2,
+                        pulsePhase: Math.random() * Math.PI * 2,
+                        colorOffset: Math.random() * 0.3
+                    });
+                }
+            }
+
+            // Initialize organic particles (attract/repel fields)
+            initParticles() {
+                this.organicParticles = [];
+
+                for (let i = 0; i < this.config.particles.count; i++) {
+                    this.organicParticles.push({
+                        x: Math.random() * this.canvasParticle.width,
+                        y: Math.random() * this.canvasParticle.height,
+                        vx: (Math.random() - 0.5) * 0.2,
+                        vy: (Math.random() - 0.5) * 0.2,
+                        size: this.config.particles.size * (0.7 + Math.random() * 0.6),
+                        phase: Math.random() * Math.PI * 2,
+                        connectionCount: 0,
+                        colorOffset: Math.random()
+                    });
+                }
+            }
+
+            // Update time display with current time
+            updateTimeDisplay() {
+                this.realTime = new Date();
+                const hours = this.realTime.getHours().toString().padStart(2, '0');
+                const minutes = this.realTime.getMinutes().toString().padStart(2, '0');
+                const timeString = `${hours}:${minutes}`;
+
+                // Update the DOM element
+                const timeDisplay = document.querySelector('.time-display');
+                if (timeDisplay) {
+                    timeDisplay.textContent = timeString;
+                }
+
+                // Slowly change the color of the info overlay based on time
+                const hourRatio = this.realTime.getHours() / 24;
+                const colorValue = Math.floor(180 + 75 * Math.sin(hourRatio * Math.PI));
+                const infoOverlay = document.querySelector('.info-overlay');
+                if (infoOverlay) {
+                    infoOverlay.style.color = `rgba(${colorValue}, ${colorValue - 30}, 255, 0.3)`;
+                }
+            }
+
+            // Draw energy fields (invisible forces)
+            drawEnergyFields(time) {
+                const ctx = this.ctxEnergy;
+                const width = this.canvasEnergy.width;
+                const height = this.canvasEnergy.height;
+                const centerX = width / 2;
+                const centerY = height / 2;
+
+                // Clear with a very subtle fade effect
+                ctx.fillStyle = 'rgba(5, 5, 15, 0.03)';
+                ctx.fillRect(0, 0, width, height);
+
+                // Draw each energy field
+                this.energyFields.forEach(field => {
+                    const t = time * field.speed + field.phase;
+                    const radius = field.radius * (0.9 + 0.1 * Math.sin(t * 0.7));
+                    const x = centerX + Math.cos(field.angle + t * 0.3) * field.distance * centerX * 0.8;
+                    const y = centerY + Math.sin(field.angle + t * 0.3) * field.distance * centerY * 0.8;
+                    const distortion = Math.sin(t * field.frequency) * this.config.energy.amplitude;
+
+                    // Create gradient for energy field
+                    const gradient = ctx.createRadialGradient(
+                        x, y, 0,
+                        x, y, radius
+                    );
+
+                    // Calculate color based on time and field properties
+                    const hue = (field.phase * 180 / Math.PI + time * 10) % 360;
+                    const alpha = 0.03 + 0.02 * Math.sin(t * 2);
+
+                    gradient.addColorStop(0, `rgba(100, 150, 255, ${alpha})`);
+                    gradient.addColorStop(0.3, `rgba(80, 120, 220, ${alpha * 0.7})`);
+                    gradient.addColorStop(1, 'rgba(5, 5, 15, 0)');
+
+                    // Draw the energy field
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius * (1 + distortion), 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+
+                    // Draw a subtle outline
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius * (1 + distortion), 0, Math.PI * 2);
+                    ctx.lineWidth = field.thickness;
+                    ctx.strokeStyle = `rgba(120, 170, 255, ${0.02 + 0.01 * Math.sin(t * 3)})`;
+                    ctx.stroke();
+                });
+            }
+
+            // Draw distortion fields (liquid air effect)
+            drawDistortionFields(time) {
+                const ctx = this.ctxDistortion;
+                const width = this.canvasDistortion.width;
+                const height = this.canvasDistortion.height;
+
+                // Clear with a very subtle fade
+                ctx.fillStyle = 'rgba(5, 5, 15, 0.1)';
+                ctx.fillRect(0, 0, width, height);
+
+                // Draw each distortion field
+                this.distortionFields.forEach(field => {
+                    const t = time * field.speed;
+                    const x = (field.x + Math.sin(t + field.phaseX) * field.amplitude) * width;
+                    const y = (field.y + Math.cos(t * 1.3 + field.phaseY) * field.amplitude) * height;
+                    const size = 150 + 50 * Math.sin(t * field.frequency);
+
+                    // Create gradient for distortion
+                    const gradient = ctx.createRadialGradient(
+                        x, y, 0,
+                        x, y, size
+                    );
+
+                    // Very subtle distortion effect
+                    gradient.addColorStop(0, 'rgba(180, 150, 255, 0.02)');
+                    gradient.addColorStop(0.5, 'rgba(120, 100, 200, 0.01)');
+                    gradient.addColorStop(1, 'rgba(5, 5, 15, 0)');
+
+                    // Draw the distortion field
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+
+                    // Apply blur effect (simulated with multiple layers)
+                    ctx.filter = 'blur(15px)';
+                    ctx.beginPath();
+                    ctx.arc(x, y, size * 0.7, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(100, 120, 220, 0.01)`;
+                    ctx.fill();
+                    ctx.filter = 'none';
+                });
+            }
+
+            // Draw glow points (soft highlights)
+            drawGlowPoints(time) {
+                const ctx = this.ctxGlow;
+                const width = this.canvasGlow.width;
+                const height = this.canvasGlow.height;
+
+                // Clear with fade
+                ctx.fillStyle = 'rgba(5, 5, 15, 0.05)';
+                ctx.fillRect(0, 0, width, height);
+
+                // Draw each glow point
+                this.glowPoints.forEach(point => {
+                    const t = time * point.speed + point.phase;
+                    const pulse = 0.7 + 0.3 * Math.sin(time * this.config.glow.pulseSpeed + point.pulsePhase);
+                    const size = point.baseSize * pulse;
+
+                    // Calculate position with subtle movement
+                    const x = (point.x + Math.sin(t * 0.5) * 30) % width;
+                    const y = (point.y + Math.cos(t * 0.7) * 20) % height;
+
+                    // Create gradient for glow
+                    const gradient = ctx.createRadialGradient(
+                        x, y, 0,
+                        x, y, size * 2
+                    );
+
+                    // Color variation based on time and point properties
+                    const hueShift = point.colorOffset * 30;
+                    const r = 120 + hueShift;
+                    const g = 150 + hueShift * 0.5;
+                    const b = 255;
+
+                    gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, 0.6)`);
+                    gradient.addColorStop(0.4, `rgba(${r * 0.7}, ${g * 0.7}, ${b}, 0.2)`);
+                    gradient.addColorStop(1, 'rgba(5, 5, 15, 0)');
+
+                    // Draw the glow point
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                });
+            }
+
+            // Draw organic particles (attract/repel fields)
+            drawParticles(time) {
+                const ctx = this.ctxParticle;
+                const width = this.canvasParticle.width;
+                const height = this.canvasParticle.height;
+
+                // Clear with fade
+                ctx.fillStyle = 'rgba(5, 5, 15, 0.03)';
+                ctx.fillRect(0, 0, width, height);
+
+                // Update particle positions
+                this.organicParticles.forEach(particle => {
+                    // Organic movement with flow fields
+                    const t = time * this.config.particles.speed + particle.phase;
+
+                    // Apply flow field based on position
+                    const flowX = Math.sin(particle.x * 0.005 + t) * this.config.particles.flowStrength;
+                    const flowY = Math.cos(particle.y * 0.005 + t * 1.3) * this.config.particles.flowStrength;
+
+                    // Update velocity with flow field
+                    particle.vx = particle.vx * 0.95 + flowX * 0.05;
+                    particle.vy = particle.vy * 0.95 + flowY * 0.05;
+
+                    // Add some randomness
+                    particle.vx += (Math.random() - 0.5) * 0.02;
+                    particle.vy += (Math.random() - 0.5) * 0.02;
+
+                    // Limit velocity
+                    const speed = Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+                    if (speed > 0.5) {
+                        particle.vx = (particle.vx / speed) * 0.5;
+                        particle.vy = (particle.vy / speed) * 0.5;
+                    }
+
+                    // Update position
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+
+                    // Wrap around edges
+                    if (particle.x < 0) particle.x = width;
+                    if (particle.x > width) particle.x = 0;
+                    if (particle.y < 0) particle.y = height;
+                    if (particle.y > height) particle.y = 0;
+
+                    // Reset connection count
+                    particle.connectionCount = 0;
+                });
+
+                // Draw connections between nearby particles
+                for (let i = 0; i < this.organicParticles.length; i++) {
+                    const p1 = this.organicParticles[i];
+
+                    // Draw particle
+                    ctx.beginPath();
+                    ctx.arc(p1.x, p1.y, p1.size, 0, Math.PI * 2);
+
+                    // Color based on velocity and time
+                    const velocity = Math.sqrt(p1.vx * p1.vx + p1.vy * p1.vy);
+                    const alpha = 0.1 + velocity * 0.5;
+                    const hue = 200 + p1.colorOffset * 60;
+
+                    ctx.fillStyle = `rgba(120, 160, 255, ${alpha})`;
+                    ctx.fill();
+
+                    // Connect to nearby particles
+                    for (let j = i + 1; j < this.organicParticles.length; j++) {
+                        const p2 = this.organicParticles[j];
+                        const dx = p1.x - p2.x;
+                        const dy = p1.y - p2.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+
+                        // Draw connection if within distance limit and not too many connections already
+                        if (distance < this.config.particles.connectionDistance &&
+                            p1.connectionCount < 5 && p2.connectionCount < 5) {
+
+                            // Calculate line properties based on distance
+                            const strength = 1 - (distance / this.config.particles.connectionDistance);
+                            const lineWidth = 0.3 + strength * 0.7;
+                            const lineAlpha = 0.03 + strength * 0.07;
+
+                            // Draw connection line
+                            ctx.beginPath();
+                            ctx.moveTo(p1.x, p1.y);
+                            ctx.lineTo(p2.x, p2.y);
+                            ctx.lineWidth = lineWidth;
+                            ctx.strokeStyle = `rgba(150, 180, 255, ${lineAlpha})`;
+                            ctx.stroke();
+
+                            // Increment connection counts
+                            p1.connectionCount++;
+                            p2.connectionCount++;
+                        }
+                    }
+                }
+            }
+
+            // Main animation loop
+            animate() {
+                // Calculate delta time for smooth animation
+                const now = performance.now();
+                const deltaTime = this.lastTime ? (now - this.lastTime) / 1000 : 0;
+                this.lastTime = now;
+
+                // Update time (slow evolution)
+                this.time += deltaTime * 0.5;
+
+                // Draw each layer
+                this.drawEnergyFields(this.time);
+                this.drawDistortionFields(this.time);
+                this.drawGlowPoints(this.time);
+                this.drawParticles(this.time);
+
+                // Continue animation
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // Initialize the background when page loads
+        window.addEventListener('load', () => {
+            const atmosphere = new DigitalAtmosphere();
+
+            // Expose config for easy tweaking (accessible in console)
+            window.atmosphereConfig = atmosphere.config;
+        });
+    </script>
+
+</body>
+
+</html>
